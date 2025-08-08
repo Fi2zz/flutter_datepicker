@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
-
 import 'package:flutter/cupertino.dart';
-import './datepicker/datepicker.dart';
+import 'package:flutter/material.dart';
+import './datepicker.dart';
 
 void main() {
   runApp(const MyApp());
@@ -23,21 +22,33 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  DateTime _date = DateTime.now();
-
-  void onDateSelected(d) {
-    setState(() {
-      _date = d;
-    });
+  late DateTime _date = DateTime.now(); //(2025, 1, 2);
+  void onDateSelected(value) {
+    setState(() => _date = value);
   }
+
+  // @override
+  // void initState() {
+  //   _date = DateTime(2025, 7, 7);
+  //   super.initState();
+  // }
 
   @override
   Widget build(BuildContext context) {
     Widget datepicker = DatePicker(
-      current: DateTime.now(),
-      from: DateTime(1900),
-      to: DateTime(2050),
-      onDateSelected: onDateSelected,
+      value: _date.copyWith(),
+      // from: DateTime(2010),
+      // to: DateTime(2030),
+      isDateEnabled: (date) => date != DateTime(2025, 8, 7),
+      onChanged: onDateSelected,
+      // headerLayout: DatePicker.headerLayoutLeftTitleRight,
+
+      dateItemBuilder: (context, item) {
+        return Text(
+          item.date.day.toString(),
+          style: TextStyle(color: Color(0xFF202020)),
+        );
+      },
     );
 
     return CupertinoPageScaffold(
@@ -47,13 +58,10 @@ class _HomeState extends State<Home> {
         children: <Widget>[
           Container(
             margin: EdgeInsets.all(12),
-            // padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: fullWhite,
-              borderRadius: BorderRadius.all(Radius.circular(12)),
-            ),
+            decoration: BoxDecoration(color: Color(0xFFFFFFFF)),
             child: datepicker,
           ),
+
           Text(
             _date.toLocal().toString(),
             style: TextStyle(color: Color(0xffff0000)),

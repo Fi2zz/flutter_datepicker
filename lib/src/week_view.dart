@@ -1,11 +1,9 @@
-// import 'package:flutter_datepicker/datepicker/datepicker.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_datepicker/datepicker/datepicker.dart';
+import './helpers.dart';
 
 class WeekView extends StatelessWidget {
-  WeekView({super.key});
-
-  final List list = List.from('日一二三四五六'.split(''));
+  final List<String> data;
+  const WeekView({super.key, required this.data});
   @override
   Widget build(BuildContext context) {
     return GridView.count(
@@ -14,11 +12,13 @@ class WeekView extends StatelessWidget {
       crossAxisCount: 7,
       childAspectRatio: 1,
       children: [
-        for (final d in list)
+        for (final date in data)
           Center(
-            child: Text(d, style: TextStyle(color: textDisabled)),
+            child: Text(
+              date,
+              style: TextStyle(color: Helpers.getWeekDayTextColor()),
+            ),
           ),
-        //  ,
       ],
     );
   }
