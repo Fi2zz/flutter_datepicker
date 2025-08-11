@@ -1,7 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
-import './helpers.dart';
+import '../utils/constants.dart';
 import 'dart:math';
 
 /// 淡入淡出组件

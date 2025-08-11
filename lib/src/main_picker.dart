@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
-
-import 'controllers/swipable_controller.dart';
+import 'package:flutter/widgets.dart';
+import 'package:intl/intl.dart';
+import 'l10n/datepicker_localizations.dart';
+import 'utils/helpers.dart';
 import 'views/swipable_view.dart';
 import 'views/month_view.dart';
 import 'views/week_view.dart';
@@ -8,6 +9,18 @@ import 'views/year_view.dart';
 import 'widgets/common_widgets.dart';
 import 'utils/constants.dart';
 import 'types/typedefs.dart';
+
+enum DatePickerHeaderLayout {
+  /// Aug 2025 >  ◄ ►
+  /// Title - Left - Right
+  // ignore: constant_identifier_names
+  HTLR,
+
+  /// ◄  Aug 2025   ►
+  /// Left - Title - Right
+  // ignore: constant_identifier_names
+  HLTR,
+}
 
 /// 日期选择器组件
 ///
@@ -20,8 +33,7 @@ class DatePicker extends StatefulWidget {
   final void Function(DateTime)? onChanged;
   final DateItemBuilder? dateItemBuilder;
   final TitleBuilder? titleBuilder;
-  final bool swipable = true;
-  final int? headerLayout; // = headerLayoutTitleLeftRight;
+  final DatePickerHeaderLayout? headerLayout; // = headerLayoutTitleLeftRight;
   const DatePicker({
     super.key,
     this.value,
@@ -32,21 +44,9 @@ class DatePicker extends StatefulWidget {
     this.titleBuilder,
     this.dateItemBuilder,
     headerLayout,
-    swipable,
-  }) : headerLayout = headerLayout ?? DatePicker.HTLR;
+  }) : headerLayout = headerLayout ?? DatePickerHeaderLayout.HTLR;
   @override
   State<DatePicker> createState() => _DatePickerState();
-  static const firstDayofweek = 1;
-
-  /// Aug 2025 >  ◄ ►
-  /// Title - Left - Right
-  // ignore: constant_identifier_names
-  static const HTLR = 1;
-
-  /// ◄  Aug 2025   ►
-  /// Left - Title - Right
-  // ignore: constant_identifier_names
-  static const HLTR = 2;
 }
 
 class _DatePickerState extends State<DatePicker> {
@@ -54,8 +54,13 @@ class _DatePickerState extends State<DatePicker> {
   late final DateTime? _to = widget.to;
 
   late DateTime _selected = maybeToday(widget.value);
-  late DateTime _display = maybeToday(widget.value)!; // 当前正在展示的月份（1 号）
-  final List<String> weekData = List.from('日一二三四五六'.split(''));
+  late DateTime _display = maybeToday(widget.value); // 当前正在展示的月份（1 号）
+  List<String> get weekData {
+    final locale = Localizations.localeOf(context);
+    final localizations = DatePickerLocalizations(locale);
+    return localizations.weekdayNames;
+  }
+
   bool _showYearsView = false;
   _onSelectYear(int year) => setState(() {
     _showYearsView = false;
@@ -90,15 +95,14 @@ class _DatePickerState extends State<DatePicker> {
   }
 
   Widget _yearBuilder(BuildContext context, int year, bool selected) {
-    Widget node = Center(
+    return Center(
       child: Text(
-        (year).toString(),
+        year.toString(),
         style: TextStyle(
           color: selected ? Helpers.textBlue : Helpers.textBlack,
         ),
       ),
     );
-    return node;
   }
 
   _titleBuilder(
@@ -110,21 +114,26 @@ class _DatePickerState extends State<DatePicker> {
     if (widget.titleBuilder != null) {
       return widget.titleBuilder!(context, date, active);
     }
-    Widget text = Text(
-      '${date.year}年 ${date.month}月',
+
+    final locale = Localizations.localeOf(context);
+    final localizations = DatePickerLocalizations.of(context);
+    final formatString = localizations?.monthYearFormat ?? 'yyyy年M月';
+    final formatter = DateFormat(formatString, locale.toString());
+    final text = formatter.format(date);
+
+    Widget textWidget = Text(
+      text,
       style: TextStyle(
         color: active ? Helpers.textBlue : Helpers.black,
         fontWeight: FontWeight.bold,
       ),
     );
 
-    if (!showChevron) return [text];
-    return [text, RotatableCheronRight(size: 16, active: _showYearsView)];
+    if (!showChevron) return [textWidget];
+    return [textWidget, RotatableCheronRight(size: 16, active: _showYearsView)];
   }
 
   Widget _buildTitleView(bool showChevron) {
-    // bool showChevron =
-    //     widget.headerLayout != DatePicker.headerLayoutLeftTitleRight;
     List<Widget> title = _titleBuilder(
       context,
       _display,
@@ -148,7 +157,9 @@ class _DatePickerState extends State<DatePicker> {
   }
 
   Widget _buildHeaderView() {
-    Widget title = _buildTitleView(widget.headerLayout != DatePicker.HLTR);
+    Widget title = _buildTitleView(
+      widget.headerLayout != DatePickerHeaderLayout.HLTR,
+    );
     bool visible = !_showYearsView;
     Widget left = FadeInOut(
       visible: visible,
@@ -168,10 +179,10 @@ class _DatePickerState extends State<DatePicker> {
     );
 
     List<Widget> children = [];
-    if (widget.headerLayout == DatePicker.HLTR) {
+    if (widget.headerLayout == DatePickerHeaderLayout.HLTR) {
       children = [left, title, right];
     }
-    if (widget.headerLayout == DatePicker.HTLR) {
+    if (widget.headerLayout == DatePickerHeaderLayout.HTLR) {
       children = [
         title,
         Row(children: [left, right]),
@@ -186,7 +197,6 @@ class _DatePickerState extends State<DatePicker> {
 
   /// 日期选择处理
   _onDateSelect(date) {
-    debugPrint('selected: $date');
     setState(() {
       _selected = date;
       widget.onChanged!(date);
@@ -223,7 +233,6 @@ class _DatePickerState extends State<DatePicker> {
                   to: _to,
                   current: _display,
                   onChangeMonth: (date) => setState(() => _display = date),
-                  isDateEnabled: widget.isDateEnabled,
                   builder: (BuildContext context, DateTime item) {
                     return MonthView(
                       month: item.month,

@@ -1,5 +1,3 @@
-import 'types/typedefs.dart';
-
 /// Get today's date (without time)
 DateTime getToday() {
   DateTime now = DateTime.now();
@@ -7,7 +5,7 @@ DateTime getToday() {
 }
 
 /// Get specified date, return today if null
-/// 
+///
 /// - [value]: Input date, can be null
 DateTime maybeToday(DateTime? value) {
   if (value == null) return getToday();
@@ -15,7 +13,7 @@ DateTime maybeToday(DateTime? value) {
 }
 
 /// Generate calendar data
-/// 
+///
 /// Generate list of all months based on date range
 /// - [start]: Start date
 /// - [end]: End date

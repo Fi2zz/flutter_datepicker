@@ -1,52 +1,56 @@
-import 'package:flutter/material.dart';
-import '../utils/helpers.dart';
-import '../types/typedefs.dart';
-import '../controllers/swipable_controller.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_datepicker/src/types/typedefs.dart';
+import 'package:flutter_datepicker/src/utils/helpers.dart';
 
-/// Month data type definition
-/// 
-/// Represents all dates for a single month, including empty placeholders
-typedef MonthData = List<DateTime?>;
+/// Swipable view controller
+///
+/// Used to control month view sliding
+class SwipableViewController {
+  _SwipableViewState? _state;
 
-/// Month grid data type definition
-/// 
-/// Represents a list of all months in the calendar
-typedef MonthGridData = List<DateTime>;
+  /// Slide to next month
+  void next() {
+    _state?.next();
+  }
 
-/// Get today's date (without time)
-DateTime getToday() {
-  DateTime now = DateTime.now();
-  return DateTime(now.year, now.month, now.day);
-}
+  /// Slide to previous month
+  void prev() {
+    _state?.prev();
+  }
 
-/// Get specified date, return today if null
-/// 
-/// - [value]: Input date, can be null
-DateTime maybeToday(DateTime? value) {
-  if (value == null) return getToday();
-  return DateTime(value.year, value.month, value.day);
-}
-
-/// Generate calendar data
-/// 
-/// Generate list of all months based on date range
-/// - [start]: Start date
-/// - [end]: End date
-/// Returns list of all months in specified range (1st of each month)
-MonthGridData generateCalendar(DateTime start, DateTime end) {
-  final list = <DateTime>[];
-  for (var y = start.year; y <= end.year; y++) {
-    final mStart = y == start.year ? start.month : 1;
-    final mEnd = y == end.year ? end.month : 12;
-    for (var m = mStart; m <= mEnd; m++) {
-      list.add(DateTime(y, m));
+  /// Slide to specified step
+  ///
+  /// - [step]: Slide step, 1 for next month, -1 for previous month
+  void slide(int step) {
+    if (step != 1 && step != -1) {
+      throw Exception('step must be 1 or -1, currently is $step');
+    }
+    if (step == 1) {
+      next();
+    } else {
+      prev();
     }
   }
-  return list;
+
+  /// Internal method: attach state
+  // ignore: library_private_types_in_public_api
+  void attach(_SwipableViewState state) {
+    _state = state;
+  }
+
+  /// Internal method: detach state
+  void dispose() {
+    _state = null;
+  }
 }
 
+/// Grid data type definition
+///
+/// Represents a list of all months in the calendar
+typedef GridData = List<DateTime>;
+
 /// Swipable view widget
-/// 
+///
 /// Supports left/right sliding to switch months with infinite scrolling
 class SwipableView extends StatefulWidget {
   /// Optional start date of date range
@@ -54,17 +58,11 @@ class SwipableView extends StatefulWidget {
 
   final SwipableViewController? controller;
 
-  /// Whether swipable (reserved parameter, currently unused)
-  final bool? swipable;
-
   /// Optional end date of date range
   final DateTime? to;
 
   /// Currently displayed month
   final DateTime? current;
-
-  /// Function to determine if date is available
-  final DateTimeEnabled? isDateEnabled;
 
   /// Month change callback
   final void Function(DateTime) onChangeMonth;
@@ -72,19 +70,15 @@ class SwipableView extends StatefulWidget {
   final SwipableViewBuilder builder;
 
   /// Create swipable month view
-  /// 
+  ///
   /// - [from]: Optional start of date range
   /// - [to]: Optional end of date range
-  /// - [swipable]: Whether swipable (reserved)
-  /// - [isDateEnabled]: Function to determine if date is available
   /// - [onChangeMonth]: Month change callback
   /// - [current]: Currently displayed month
   const SwipableView({
     super.key,
     this.from,
     this.to,
-    this.swipable,
-    this.isDateEnabled,
     required this.onChangeMonth,
     required this.builder,
     this.current,
@@ -99,7 +93,7 @@ class _SwipableViewState extends State<SwipableView> {
   late final PageController _controller;
 
   /// Month grid data
-  late MonthGridData _grid;
+  late GridData _grid;
 
   /// Optional start date of date range
   late DateTime _from;
@@ -117,7 +111,7 @@ class _SwipableViewState extends State<SwipableView> {
   late DateTime _current;
 
   /// Prepend data (when swiping right)
-  /// 
+  ///
   /// Automatically prepend earlier month data when user swipes right to boundary
   _prepend() {
     setState(() {
@@ -129,7 +123,7 @@ class _SwipableViewState extends State<SwipableView> {
   }
 
   /// Append data (when swiping left)
-  /// 
+  ///
   /// Automatically append later month data when user swipes left to boundary
   _append() {
     setState(() {
@@ -141,7 +135,7 @@ class _SwipableViewState extends State<SwipableView> {
   }
 
   /// Initialize data
-  /// 
+  ///
   /// Initialize date range, current month, and selected date based on input parameters
   _generate() {
     DateTime today = getToday();
@@ -151,19 +145,14 @@ class _SwipableViewState extends State<SwipableView> {
     _current = widget.current ?? DateTime(today.year, today.month);
   }
 
-  /// Check if two dates are equal (compare year and month only)
-  bool _internalEqual(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month;
-  }
-
   /// Find index of specified date in grid
   int _internalFindIndex(DateTime? date) {
     if (date == null) return -1;
-    return _grid.indexWhere((m) => _internalEqual(m, date));
+    return _grid.indexWhere((m) => isSameMonth(m, date));
   }
 
   /// Regenerate data
-  /// 
+  ///
   /// Recalculate date range when external current changes
   _regenerate(DateTime current) {
     _from = current.copyWith(year: current.year - _delta, month: 1);
@@ -193,7 +182,7 @@ class _SwipableViewState extends State<SwipableView> {
   }
 
   /// Trigger change callback once
-  /// 
+  ///
   /// Ensure month change callback is triggered on initial display
   _triggerChangeOnce(_) {
     int idx = _controller.initialPage % _grid.length;
@@ -202,14 +191,14 @@ class _SwipableViewState extends State<SwipableView> {
 
   @override
   void dispose() {
-    widget.controller?.detach();
+    widget.controller?.dispose();
     _controller.removeListener(_listener);
     _controller.dispose();
     super.dispose();
   }
 
   /// Page sliding listener
-  /// 
+  ///
   /// Handle data appending logic on boundary sliding
   _listener() {
     int page = _controller.page!.round();
@@ -249,7 +238,7 @@ class _SwipableViewState extends State<SwipableView> {
     super.didUpdateWidget(oldWidget);
 
     if (oldWidget.controller != widget.controller) {
-      oldWidget.controller?.detach();
+      oldWidget.controller?.dispose();
       widget.controller?.attach(this);
     }
     if (_current != widget.current && widget.current != null) {
@@ -258,7 +247,7 @@ class _SwipableViewState extends State<SwipableView> {
   }
 
   /// Month index change handling
-  /// 
+  ///
   /// Trigger callback when sliding to new month
   _onIndexChanged(int idx) {
     final m = _monthAt(idx);
