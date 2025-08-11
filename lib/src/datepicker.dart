@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_datepicker/src/year_view.dart';
 import './helpers.dart';
-import './swipable.dart';
+import 'swipable_view.dart';
 import 'week_view.dart';
 import './widgets.dart';
+import './month_view.dart';
 
+/// 自定义标题构建器类型定义
+///
+/// 用于自定义日期选择器标题栏的显示内容
+/// - [context]: 构建上下文
+/// - [date]: 当前显示的日期
+/// - [highlighted]: 是否为高亮状态
 typedef TitleBuilder =
     List<Widget> Function(
       BuildContext context,
@@ -12,6 +19,10 @@ typedef TitleBuilder =
       bool highlighted,
     );
 
+/// 日期选择器组件
+///
+/// 一个功能完整的日期选择器，支持月份切换、年份选择、日期禁用等功能
+/// 提供多种布局方式和自定义构建选项
 class DatePicker extends StatefulWidget {
   final DateTime? value;
   final DateTime? from, to;
@@ -19,6 +30,7 @@ class DatePicker extends StatefulWidget {
   final void Function(DateTime)? onChanged;
   final DateItemBuilder? dateItemBuilder;
   final TitleBuilder? titleBuilder;
+  final bool swipable = true;
   final int? headerLayout; // = headerLayoutTitleLeftRight;
   const DatePicker({
     super.key,
@@ -30,24 +42,30 @@ class DatePicker extends StatefulWidget {
     this.titleBuilder,
     this.dateItemBuilder,
     headerLayout,
-  }) : headerLayout = headerLayout ?? DatePicker.headerLayoutTitleLeftRight;
+    swipable,
+  }) : headerLayout = headerLayout ?? DatePicker.HTLR;
   @override
   State<DatePicker> createState() => _DatePickerState();
   static const firstDayofweek = 1;
 
   /// Aug 2025 >  ◄ ►
-  static const headerLayoutTitleLeftRight = 1;
+  /// Title - Left - Right
+  // ignore: constant_identifier_names
+  static const HTLR = 1;
 
   /// ◄  Aug 2025   ►
-  static const headerLayoutLeftTitleRight = 2;
+  /// Left - Title - Right
+  // ignore: constant_identifier_names
+  static const HLTR = 2;
 }
 
 class _DatePickerState extends State<DatePicker> {
   late final DateTime? _from = widget.from;
   late final DateTime? _to = widget.to;
-  late DateTime _display = widget.value!; // 当前正在展示的月份（1 号）
+
+  late DateTime _selected = maybeToday(widget.value);
+  late DateTime _display = maybeToday(widget.value)!; // 当前正在展示的月份（1 号）
   final List<String> weekData = List.from('日一二三四五六'.split(''));
-  final SwipableMonthController _controller = SwipableMonthController();
   bool _showYearsView = false;
   _onSelectYear(int year) => setState(() {
     _showYearsView = false;
@@ -140,16 +158,14 @@ class _DatePickerState extends State<DatePicker> {
   }
 
   Widget _buildHeaderView() {
-    Widget title = _buildTitleView(
-      widget.headerLayout != DatePicker.headerLayoutLeftTitleRight,
-    );
+    Widget title = _buildTitleView(widget.headerLayout != DatePicker.HLTR);
     bool visible = !_showYearsView;
     Widget left = FadeInOut(
       visible: visible,
       child: Chevron(
         type: 'left',
         touchable: _isMonthEnabled(-1, _display) && !_showYearsView,
-        onTap: () => _controller.slide(-1),
+        onTap: () => controller.prev(),
       ),
     );
     Widget right = FadeInOut(
@@ -157,15 +173,15 @@ class _DatePickerState extends State<DatePicker> {
       child: Chevron(
         type: 'right',
         touchable: _isMonthEnabled(1, _display) && !_showYearsView,
-        onTap: () => _controller.slide(1),
+        onTap: () => controller.next(),
       ),
     );
 
     List<Widget> children = [];
-    if (widget.headerLayout == DatePicker.headerLayoutLeftTitleRight) {
+    if (widget.headerLayout == DatePicker.HLTR) {
       children = [left, title, right];
     }
-    if (widget.headerLayout == DatePicker.headerLayoutTitleLeftRight) {
+    if (widget.headerLayout == DatePicker.HTLR) {
       children = [
         title,
         Row(children: [left, right]),
@@ -177,6 +193,17 @@ class _DatePickerState extends State<DatePicker> {
       children: children,
     );
   }
+
+  /// 日期选择处理
+  _onDateSelect(date) {
+    debugPrint('selected: $date');
+    setState(() {
+      _selected = date;
+      widget.onChanged!(date);
+    });
+  }
+
+  SwipableViewController controller = SwipableViewController();
 
   @override
   Widget build(BuildContext context) {
@@ -200,16 +227,23 @@ class _DatePickerState extends State<DatePicker> {
               SizedBox(
                 width: Helpers.maxWidth,
                 height: Helpers.monthHeight,
-                child: SwipableMonthView(
-                  key: _controller.key,
+                child: SwipableView(
+                  controller: controller,
                   from: _from,
                   to: _to,
                   current: _display,
-                  selected: widget.value,
-                  onSelectDate: widget.onChanged!,
                   onChangeMonth: (date) => setState(() => _display = date),
-                  itemBuilder: widget.dateItemBuilder!,
                   isDateEnabled: widget.isDateEnabled,
+                  builder: (BuildContext context, DateTime item) {
+                    return MonthView(
+                      month: item.month,
+                      year: item.year,
+                      value: _selected,
+                      itemBuilder: widget.dateItemBuilder,
+                      isDateEnabled: widget.isDateEnabled,
+                      onTapDate: _onDateSelect,
+                    );
+                  },
                 ),
               ),
             ],

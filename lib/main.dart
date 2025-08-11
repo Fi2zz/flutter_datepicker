@@ -43,12 +43,12 @@ class _HomeState extends State<Home> {
       onChanged: onDateSelected,
       // headerLayout: DatePicker.headerLayoutLeftTitleRight,
 
-      dateItemBuilder: (context, item) {
-        return Text(
-          item.date.day.toString(),
-          style: TextStyle(color: Color(0xFF202020)),
-        );
-      },
+      // dateItemBuilder: (context, item) {
+      //   return Text(
+      //     item.date.day.toString(),
+      //     style: TextStyle(color: Color(0xFF202020)),
+      //   );
+      // },
     );
 
     return CupertinoPageScaffold(

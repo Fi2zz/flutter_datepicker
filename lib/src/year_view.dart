@@ -1,15 +1,32 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_datepicker/src/widgets.dart';
 
+/// 年份选择视图组件
+/// 
+/// 提供年份网格选择功能，支持垂直滚动和无限加载
 class YearsView extends StatefulWidget {
-  final int? value; // 当前已选年份
-  final ValueChanged<int> onSelect; // 选中回调
-  final int? from; // 可选开始
-  final int? to; // 可选结束
+  /// 当前选中的年份
+  final int? value;
+  
+  /// 年份选择回调
+  final ValueChanged<int> onSelect;
+  
+  /// 可选年份范围的开始年份
+  final int? from;
+  
+  /// 可选年份范围的结束年份
+  final int? to;
 
-  final Widget Function(BuildContext context, int year, bool selected)
-  itemBuilder;
+  /// 自定义年份项构建器
+  final Widget Function(BuildContext context, int year, bool selected) itemBuilder;
 
+  /// 创建年份选择视图
+  /// 
+  /// - [value]: 当前选中的年份
+  /// - [onSelect]: 年份选择回调
+  /// - [from]: 可选年份范围的开始
+  /// - [to]: 可选年份范围的结束
+  /// - [itemBuilder]: 自定义年份项构建器
   const YearsView({
     super.key,
     this.value,
@@ -23,25 +40,40 @@ class YearsView extends StatefulWidget {
 }
 
 class _YearsViewState extends State<YearsView> {
-  // 常量
-  static const int _columns = 4; // 每行 4 列
-  static const int _preloads = 10; // 边缘追加页数
-  // 数据
-  final List<int> _years = []; // 年份列表
-  late PageController _controller; // PageView 控制器
-  bool _firstLayout = true; // 仅首次布局
-  bool _loading = false; // 防递归锁
+  /// 网格列数（每行4列）
+  static const int _columns = 4;
+  
+  /// 边缘追加页数
+  static const int _preloads = 10;
+  
+  /// 年份列表
+  final List<int> _years = [];
+  
+  /// 页面控制器
+  late PageController _controller;
+  
+  /// 是否首次布局
+  bool _firstLayout = true;
+  
+  /// 加载锁，防止递归加载
+  bool _loading = false;
+  
   /// 根据父级约束计算行数
+  /// 
+  /// - [constraint]: 父级约束
+  /// 返回可显示的行数
   int _calcRows(BoxConstraints constraint) {
     final cellWidth = constraint.maxWidth / _columns;
     final cellHeight = cellWidth / 2; // 高 = 宽/2
     return (constraint.maxHeight / cellHeight).floor();
   }
 
-  /// 每页 item 数量
+  /// 计算每页的项数
   int _perPage(BoxConstraints c) => _calcRows(c) * _columns;
 
   /// 初始化年份列表
+  /// 
+  /// 根据父级约束计算初始年份范围
   void _initYears(BoxConstraints c) {
     final now = DateTime.now().year;
     final perPage = _perPage(c);
@@ -51,12 +83,18 @@ class _YearsViewState extends State<YearsView> {
   }
 
   /// 计算默认滚动到的页码
+  /// 
+  /// 根据当前选中年份计算初始页码
   int _targetPage(BoxConstraints c) {
     final targetYear = widget.value ?? DateTime.now().year;
     return ((targetYear - _years.first) / _perPage(c)).floor();
   }
 
-  /// 向前/向后追加数据
+  /// 向前/向后追加年份数据
+  /// 
+  /// 当用户滚动到边界时，自动追加更多年份
+  /// - [c]: 父级约束
+  /// - [prepend]: true表示向前追加，false表示向后追加
   void _append(BoxConstraints c, {bool prepend = false}) {
     if (_loading) return;
     _loading = true;
@@ -85,6 +123,8 @@ class _YearsViewState extends State<YearsView> {
   }
 
   /// 滚动结束检查是否需要追加
+  /// 
+  /// 当用户滚动到边界时，检查是否需要加载更多年份
   void _handleScrollEnd(BoxConstraints c) {
     if (_loading) return;
     final page = _controller.page!.round();
@@ -96,10 +136,12 @@ class _YearsViewState extends State<YearsView> {
     }
   }
 
+  /// 根据约束计算页数
   int _itemCountByConstraints(BoxConstraints constraints) {
     return (_years.length / _perPage(constraints)).ceil();
   }
 
+  /// 获取指定页的年份列表
   List<int> _yearsCountByConstraint(BoxConstraints constraints, int pageIndex) {
     final start = pageIndex * _perPage(constraints);
     final end = (start + _perPage(constraints)).clamp(0, _years.length);
@@ -139,6 +181,10 @@ class _YearsViewState extends State<YearsView> {
     );
   }
 
+  /// 构建单页年份网格
+  /// 
+  /// - [pageIndex]: 页码
+  /// - [constraints]: 父级约束
   Widget _buildPage(
     BuildContext context,
     int pageIndex,
