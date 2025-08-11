@@ -1,41 +1,38 @@
 import 'package:flutter/material.dart';
+import '../utils/helpers.dart';
+import '../types/typedefs.dart';
+import '../controllers/swipable_controller.dart';
 
-/// 获取今天的日期（去除时间部分）
+/// Month data type definition
+/// 
+/// Represents all dates for a single month, including empty placeholders
+typedef MonthData = List<DateTime?>;
+
+/// Month grid data type definition
+/// 
+/// Represents a list of all months in the calendar
+typedef MonthGridData = List<DateTime>;
+
+/// Get today's date (without time)
 DateTime getToday() {
   DateTime now = DateTime.now();
   return DateTime(now.year, now.month, now.day);
 }
 
-/// 获取指定日期，如果为null则返回今天
-///
-/// - [value]: 输入日期，可以为null
+/// Get specified date, return today if null
+/// 
+/// - [value]: Input date, can be null
 DateTime maybeToday(DateTime? value) {
   if (value == null) return getToday();
   return DateTime(value.year, value.month, value.day);
 }
 
-/// 月份数据类型定义
-///
-/// 表示单个月份的所有日期，包含空位填充r
-typedef MonthData = List<DateTime?>;
-
-/// 月份网格数据类型定义
-///
-/// 表示日历中所有月份的列表
-typedef MonthGridData = List<DateTime>;
-
-/// 日期项构建器类型定义
-///
-/// - [context]: 构建上下文
-/// - [item]: 包含日期信息的对象
-typedef DateItemBuilder = Widget Function(BuildContext context, DateItem item);
-
-/// 生成日历数据
-///
-/// 根据日期范围生成所有月份的列表
-/// - [start]: 开始日期
-/// - [end]: 结束日期
-/// 返回指定范围内的所有月份（每月1号）
+/// Generate calendar data
+/// 
+/// Generate list of all months based on date range
+/// - [start]: Start date
+/// - [end]: End date
+/// Returns list of all months in specified range (1st of each month)
 MonthGridData generateCalendar(DateTime start, DateTime end) {
   final list = <DateTime>[];
   for (var y = start.year; y <= end.year; y++) {
@@ -48,107 +45,40 @@ MonthGridData generateCalendar(DateTime start, DateTime end) {
   return list;
 }
 
-/// 日期项数据类
-///
-/// 包含日期及其状态的完整信息
-class DateItem {
-  /// 日期
-  final DateTime date;
-
-  /// 是否选中
-  final bool selected;
-
-  /// 是否可用
-  final bool enabled;
-
-  DateItem({required this.date, required this.selected, required this.enabled});
-}
-
-/// 日期可用性判断函数类型定义
-///
-/// - [DateTime]: 要判断的日期
-/// 返回该日期是否可用
-typedef DateTimeEnabled = bool Function(DateTime);
-
-/// 可滑动月份控制器
-///
-/// 用于控制月份视图的滑动切换
-class SwipableViewController {
-  _SwipableViewState? _state;
-
-  /// 滑动到下一个月
-  void next() {
-    _state?.next();
-  }
-
-  /// 滑动到上一个月
-  void prev() {
-    _state?.prev();
-  }
-
-  /// 滑动到指定步长的月份
-  ///
-  /// - [step]: 滑动步长，1为下一月，-1为上一月
-  void slide(int step) {
-    if (step != 1 && step != -1) {
-      throw Exception('step must be 1 or -1, currently is $step');
-    }
-    if (step == 1) {
-      next();
-    } else {
-      prev();
-    }
-  }
-
-  /// 内部方法：绑定状态
-  // ignore: library_private_types_in_public_api
-  void attach(_SwipableViewState state) {
-    _state = state;
-  }
-
-  /// 内部方法：解绑状态
-  void detach() {
-    _state = null;
-  }
-}
-
-typedef SwipableViewBuilder =
-    Widget Function(BuildContext context, DateTime item);
-
-/// 可滑动月份视图组件
-///
-/// 支持左右滑动切换月份，支持无限滚动
+/// Swipable view widget
+/// 
+/// Supports left/right sliding to switch months with infinite scrolling
 class SwipableView extends StatefulWidget {
-  /// 可选日期范围的开始日期
+  /// Optional start date of date range
   final DateTime? from;
 
   final SwipableViewController? controller;
 
-  /// 是否可滑动（预留参数，当前未使用）
+  /// Whether swipable (reserved parameter, currently unused)
   final bool? swipable;
 
-  /// 可选日期范围的结束日期
+  /// Optional end date of date range
   final DateTime? to;
 
-  /// 当前显示的月份
+  /// Currently displayed month
   final DateTime? current;
 
-  /// 日期是否可用的判断函数
+  /// Function to determine if date is available
   final DateTimeEnabled? isDateEnabled;
 
-  /// 月份变更回调
+  /// Month change callback
   final void Function(DateTime) onChangeMonth;
 
   final SwipableViewBuilder builder;
 
-  /// 创建可滑动月份视图
-  ///
-  /// - [from]: 可选日期范围的开始
-  /// - [to]: 可选日期范围的结束
-  /// - [swipable]: 是否可滑动（预留）
-  /// - [isDateEnabled]: 判断日期是否可用
-  /// - [onChangeMonth]: 月份变更回调
-  /// - [current]: 当前显示的月份
+  /// Create swipable month view
+  /// 
+  /// - [from]: Optional start of date range
+  /// - [to]: Optional end of date range
+  /// - [swipable]: Whether swipable (reserved)
+  /// - [isDateEnabled]: Function to determine if date is available
+  /// - [onChangeMonth]: Month change callback
+  /// - [current]: Currently displayed month
   const SwipableView({
     super.key,
     this.from,
@@ -165,34 +95,30 @@ class SwipableView extends StatefulWidget {
 }
 
 class _SwipableViewState extends State<SwipableView> {
-  /// 页面控制器，用于管理月份滑动
+  /// Page controller for managing month sliding
   late final PageController _controller;
 
-  /// 月份网格数据
+  /// Month grid data
   late MonthGridData _grid;
 
-  /// 可选日期范围的开始日期
+  /// Optional start date of date range
   late DateTime _from;
 
-  /// 可选日期范围的结束日期
+  /// Optional end date of date range
   late DateTime _to;
 
-  /// 滑动范围增量（年数）
+  /// Sliding range increment (in years)
   final int _delta = 1;
 
-  /// 当前页面游标
+  /// Current page cursor
   int _cursor = -1;
 
-  /// 当前选中的日期
-
-  /// 当前显示的月份
+  /// Currently displayed month
   late DateTime _current;
 
-  // get key => null;
-
-  /// 向前追加数据（右滑时）
-  ///
-  /// 当用户向右滑动到边界时，自动追加更早的月份数据
+  /// Prepend data (when swiping right)
+  /// 
+  /// Automatically prepend earlier month data when user swipes right to boundary
   _prepend() {
     setState(() {
       _to = _from.copyWith(year: _from.year, month: 12);
@@ -202,9 +128,9 @@ class _SwipableViewState extends State<SwipableView> {
     });
   }
 
-  /// 向后追加数据（左滑时）
-  ///
-  /// 当用户向左滑动到边界时，自动追加更晚的月份数据
+  /// Append data (when swiping left)
+  /// 
+  /// Automatically append later month data when user swipes left to boundary
   _append() {
     setState(() {
       _from = _to.copyWith(year: _to.year - _delta, month: 1);
@@ -214,9 +140,9 @@ class _SwipableViewState extends State<SwipableView> {
     });
   }
 
-  /// 初始化数据
-  ///
-  /// 根据传入的参数初始化日期范围、当前月份和选中日期
+  /// Initialize data
+  /// 
+  /// Initialize date range, current month, and selected date based on input parameters
   _generate() {
     DateTime today = getToday();
     _from = widget.from ?? DateTime(today.year - _delta, 1);
@@ -225,20 +151,20 @@ class _SwipableViewState extends State<SwipableView> {
     _current = widget.current ?? DateTime(today.year, today.month);
   }
 
-  /// 判断两个日期是否相等（仅比较年月）
+  /// Check if two dates are equal (compare year and month only)
   bool _internalEqual(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month;
   }
 
-  /// 查找指定日期在网格中的索引
+  /// Find index of specified date in grid
   int _internalFindIndex(DateTime? date) {
     if (date == null) return -1;
     return _grid.indexWhere((m) => _internalEqual(m, date));
   }
 
-  /// 重新生成数据
-  ///
-  /// 当外部传入的current发生变化时，重新计算日期范围
+  /// Regenerate data
+  /// 
+  /// Recalculate date range when external current changes
   _regenerate(DateTime current) {
     _from = current.copyWith(year: current.year - _delta, month: 1);
     _to = current.copyWith(year: current.year + _delta, month: 12);
@@ -249,10 +175,9 @@ class _SwipableViewState extends State<SwipableView> {
     _cursor = -1;
   }
 
-  /// 初始化页面控制器
+  /// Initialize page controller
   _initController() {
     int initialPage = _internalFindIndex(widget.current!);
-    // if (initialPage == -1) _internalFindIndex(widget.selected);
     if (initialPage == -1) initialPage = 0;
     _controller = PageController(initialPage: initialPage);
     _controller.addListener(_listener);
@@ -267,9 +192,9 @@ class _SwipableViewState extends State<SwipableView> {
     WidgetsBinding.instance.addPostFrameCallback(_triggerChangeOnce);
   }
 
-  /// 触发一次变更回调
-  ///
-  /// 确保初始显示时触发月份变更回调
+  /// Trigger change callback once
+  /// 
+  /// Ensure month change callback is triggered on initial display
   _triggerChangeOnce(_) {
     int idx = _controller.initialPage % _grid.length;
     _onIndexChanged(idx);
@@ -283,9 +208,9 @@ class _SwipableViewState extends State<SwipableView> {
     super.dispose();
   }
 
-  /// 页面滑动监听器
-  ///
-  /// 处理边界滑动时的数据追加逻辑
+  /// Page sliding listener
+  /// 
+  /// Handle data appending logic on boundary sliding
   _listener() {
     int page = _controller.page!.round();
     if (page != _cursor) {
@@ -299,7 +224,7 @@ class _SwipableViewState extends State<SwipableView> {
     }
   }
 
-  /// 滑动到下一个月
+  /// Slide to next month
   next() {
     if (_controller.hasClients) {
       _controller.nextPage(
@@ -309,7 +234,7 @@ class _SwipableViewState extends State<SwipableView> {
     }
   }
 
-  /// 滑动到上一个月
+  /// Slide to previous month
   prev() {
     if (_controller.hasClients) {
       _controller.previousPage(
@@ -332,9 +257,9 @@ class _SwipableViewState extends State<SwipableView> {
     }
   }
 
-  /// 月份索引变更处理
-  ///
-  /// 当页面滑动到新月份时触发回调
+  /// Month index change handling
+  /// 
+  /// Trigger callback when sliding to new month
   _onIndexChanged(int idx) {
     final m = _monthAt(idx);
     DateTime date = m.copyWith(year: m.year, month: m.month, day: 1);
@@ -342,7 +267,7 @@ class _SwipableViewState extends State<SwipableView> {
     widget.onChangeMonth(date);
   }
 
-  /// 获取指定索引的月份
+  /// Get month at specified index
   DateTime _monthAt(int virtualIndex) => _grid[virtualIndex % _grid.length];
 
   @override

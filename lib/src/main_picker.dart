@@ -1,23 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_datepicker/src/year_view.dart';
-import './helpers.dart';
-import 'swipable_view.dart';
-import 'week_view.dart';
-import './widgets.dart';
-import './month_view.dart';
 
-/// 自定义标题构建器类型定义
-///
-/// 用于自定义日期选择器标题栏的显示内容
-/// - [context]: 构建上下文
-/// - [date]: 当前显示的日期
-/// - [highlighted]: 是否为高亮状态
-typedef TitleBuilder =
-    List<Widget> Function(
-      BuildContext context,
-      DateTime date,
-      bool highlighted,
-    );
+import 'controllers/swipable_controller.dart';
+import 'views/swipable_view.dart';
+import 'views/month_view.dart';
+import 'views/week_view.dart';
+import 'views/year_view.dart';
+import 'widgets/common_widgets.dart';
+import 'utils/constants.dart';
+import 'types/typedefs.dart';
 
 /// 日期选择器组件
 ///
